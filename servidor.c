@@ -33,14 +33,36 @@ int tratar_mensaje(int *socket){
 	pthread_cond_signal(&cond_mensaje);
 	pthread_mutex_unlock(&mutex_mensaje);
 
-	char mensaje[256];
+	char operacion[256];
 	
-	if (readLine(sc_client, mensaje, 256) < 0){
+	if (readLine(sc_client, operacion, 256) < 0){
 		//intentamos comunicar el error al cliente
 		close(sc_client);
 		perror("Error al recibir el mensaje");
 	}
-	printf("s> mensaje recibido: %s\n", mensaje);
+	if (strcmp(operacion, "REGISTER") == 0){
+		char nombre[256];
+		readLine(sc_client, nombre, 256);
+		char alias[256];
+		readLine(sc_client, alias, 256);
+		char fecha[11];
+		readLine(sc_client, fecha, 11);
+
+		/*Check if client data is correct*/
+		
+		/**/
+		u_int16_t response;
+		response = htons(0);
+		if (write(sc_client, &response, 2) < 0){
+			perror("Error al enviar el mensaje");
+			
+		}
+		printf("s> mensaje recibido: %s %s %s\n", nombre, alias, fecha);
+
+		close(sc_client);
+		return 0;
+	}
+	
 
 
 }

@@ -59,17 +59,19 @@ class client :
         else: 
             # window['_CLIENT_'].print("c> REGISTER " + client._username)
             while True:
-                response = socket.htons(sock.recv(1))
+                response = sock.recv(2)
+                response = int.from_bytes(response, byteorder='big')
                 match response:
-                    case b'0':
+                    case 0:
                         window['_SERVER_'].print("s> REGISTER OK")
                         return
-                    case b'1':
+                    case 1:
                         window['_SERVER_'].print("s> USERNAME IN USER")
                         return
-                    case b'2':
+                    case 2:
                         window['_SERVER_'].print("s> REGISTER FAIL")
                         return
+                return
                 
 
         finally:
@@ -100,15 +102,16 @@ class client :
         else:
             # window['_CLIENT_'].print("c> UNREGISTER " + client._username)
             while True:
-                response = socket.htons(sock.recv(1))
+                response = sock.recv(2)
+                response = int.from_bytes(response, byteorder='big')
                 match response:
-                    case b'0':
+                    case 0:
                         window['_SERVER_'].print("s> UNREGISTER OK")
                         return
-                    case b'1':
+                    case 1:
                         window['_SERVER_'].print("s> USER DOES NOT EXIST")
                         return
-                    case b'2':
+                    case  2:
                         window['_SERVER_'].print("s> UNREGISTER FAIL")
                         return
         finally:
@@ -140,18 +143,19 @@ class client :
         else:
             # window['_CLIENT_'].print("c> CONNECT " + client._username)
             while True:
-                response = socket.htons(sock.recv(1))
+                response = sock.recv(2)
+                response = int.from_bytes(response, byteorder='big')
                 match response:
-                    case b'0':
+                    case 0:
                         window['_SERVER_'].print("s> CONNECT OK")
                         return
-                    case b'1':
+                    case 1:
                         window['_SERVER_'].print("s> CONNECT FAIL, USER DOES NOT EXIST")
                         return
-                    case b'2':
+                    case 2:
                         window['_SERVER_'].print("s> USER ALREADY CONNECTED")
                         return
-                    case b'3':
+                    case 3:
                         window['_SERVER_'].print("s> CONNECT FAIL")
                         return
         finally:
@@ -181,18 +185,19 @@ class client :
         else:
             # window['_CLIENT_'].print("c> DISCONNECT " + client._username)
             while True:
-                response = socket.htons(sock.recv(1))
+                response = sock.recv(2)
+                response = int.from_bytes(response, byteorder='big')
                 match response:
-                    case b'0':
+                    case 0:
                         window['_SERVER_'].print("s> DISCONNECT OK")
                         return
-                    case b'1':
+                    case 1:
                         window['_SERVER_'].print("s> DISCONNECT FAIL / USER DOES NOT EXIST")
                         return
-                    case b'2':
+                    case 2:
                         window['_SERVER_'].print("s> DISCONNECT FAIL / USER NOT CONNECTED")
                         return
-                    case b'3':
+                    case 3:
                         window['_SERVER_'].print("s> DISCONNECT FAIL")
                         return
         finally:
@@ -226,16 +231,17 @@ class client :
         else:
             # window['_CLIENT_'].print("c> SEND " + user + " " + message)
             while True:
-                response = socket.htons(sock.recv(1))
+                response = sock.recv(2)
+                response = int.from_bytes(response, byteorder='big')
                 match response:
-                    case b'0':
+                    case 0:
                         id = readMessage(sock)
                         window['_SERVER_'].print("s> SEND OK - MESSAGE ", id)
                         return
-                    case b'1':
+                    case 1:
                         window['_SERVER_'].print("s> SEND FAIL / USER DOES NOT EXIST")
                         return
-                    case b'2':
+                    case 2:
                         window['_SERVER_'].print("s> SEND FAIL")
                         return
         
@@ -274,7 +280,8 @@ class client :
         else:
             window['_CLIENT_'].print("c> CONNECTEDUSERS")
             while True:
-                response = socket.htons(sock.recv(1))
+                response = sock.recv(2)
+                response = int.from_bytes(response, byteorder='big')
                 match response:
                     case b'0':
                         users = ""
