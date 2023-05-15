@@ -25,6 +25,7 @@ struct UserList *lista_usuarios;
 void enviar_mensaje(struct usuario *user ,struct mensaje *msg){
 	struct sockaddr_in client_listen;
 	int sc_client;
+	printf("Enviando mensaje a %s:%d\n", inet_ntoa(user->ip), user->puerto);
 	//conectamos con el cliente
 	if ((sc_client = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		perror("Error al crear el socket");
@@ -46,7 +47,7 @@ void enviar_mensaje(struct usuario *user ,struct mensaje *msg){
 
 	user->last_message = msg->id; //!
 
-	close(sc_client);
+	//close(sc_client);
 };
 
 
@@ -276,9 +277,10 @@ int tratar_mensaje(int *socket){
 		if (readLine(sc_client, mensaje, 256) < 0){
 			perror("Error al recibir el mensaje");
 		}
-
+		printf("check1\n");
 		struct UserNode *user = searchUser(lista_usuarios, alias);
 		struct UserNode *user_destino = searchUser(lista_usuarios, alias_destino);
+		printf("check2\n");
 		if(user == NULL || user_destino == NULL){
 			//alias does not exist
 			u_int16_t response;
@@ -291,9 +293,11 @@ int tratar_mensaje(int *socket){
 		//alias exists
 
 		struct mensaje *msgToSave;
+		msgToSave = malloc(sizeof(struct mensaje));
 		msgToSave->id = user->data.last_message + 1;
 		strcpy(msgToSave->remite, alias);
 		strcpy(msgToSave->mensaje, mensaje);
+		printf("s> envio mensaje %s\n", msgToSave->mensaje);
 		addMsg(user_destino->data.mensajes_pendientes, *msgToSave);
 	    
 		u_int16_t response;

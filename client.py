@@ -6,6 +6,8 @@ import argparse
 import socket
 import threading
 
+global msgSocket
+
 def readMessage(sock):
         message = ""
         while True:
@@ -123,21 +125,26 @@ class client :
 
 
     def listen(self, sock, window):
+
+        print("Listening on port " + str(sock.getsockname()[1]))
         
+        server, ip_server = sock.accept()
         while True:
            
-            socket.listen(1)
-            sock, server_address = sock.accept()
+            sock.listen(1)
             try:
-                sock.connect(server_address)
-                op = readMessage(sock)
+                #op = readMessage(sock)
                 user_alias = readMessage(sock)
                 id_message = readMessage(sock)
                 message = readMessage(sock)
                 window['_SERVER_'].print("s> MESSAGE" + id_message + " FROM " + user_alias + "\n" + message + "\n END")
                 
             except:
-                pass
+                print("Error")
+                break
+                
+        sock.close()
+        return
 
     # *
     # * @param user - User name to connect to the system
@@ -149,18 +156,22 @@ class client :
     def connect(user, window):
         
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setblocking(True)
         
+
         try:
             sock.connect((client._server, client._port))
             window['_CLIENT_'].print("c> CONNECT " + client._username)
-            #server_address = (client._server, sock.bind("0.0.0.0", 0))
-            #hilo = threading.Thread(target= client.listen, args=(sock, window, server_address))
-            #hilo.start()
+
+            msgSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+            msgSocket.bind((client._server, 0))
+            print("Listening on port " + str(msgSocket.getsockname()[1]))
+            hilo = threading.Thread(target= client.listen, args=(msgSocket, window))
+            hilo.start()
              
             sock.sendall(b'CONNECT\0')
             sock.sendall(bytes(user + '\0', 'utf-8'))
-            sock.sendall(bytes(str(client._port) + '\0', 'utf-8'))
+            sock.sendall(bytes(str(msgSocket.getsockname()[1]) + '\0', 'utf-8'))
         except :
             window['_SERVER_'].print("s> CONNECT FAIL")
         
@@ -314,7 +325,7 @@ class client :
                         user_count = int(user_count)
                         for i in range(user_count):
                             user = readMessage(sock)
-                            users += user + " "
+                            users += user + ", "
                         
                         window['_SERVER_'].print("s> CONNECTED USERS ", user_count," OK - ", users)
                         return
