@@ -9,25 +9,31 @@ import threading
 global msgSocket
 
 def readMessage(sock):
-        message = ""
-        while True:
-            c = sock.recv(1)
-            if c == b'\0':
-                break
-            message += c.decode('utf-8')
-        return message
+    message = ""
+    while True:
+        c = sock.recv(1)
+        if c == b'\0':
+            break
+        message += c.decode('utf-8')
+    return message
 
 def listen(sock, window):
 
-    print("Listening on port " + str(sock.getsockname()[1]))
     
-    sock.accept()
+    server, ip_server = sock.accept()
+
+    print("Listening on " + str(server.getsockname()[1]))
     while True:
         try:
             #op = readMessage(sock)
-            user_alias = readMessage(sock)
-            id_message = readMessage(sock)
-            message = readMessage(sock)
+            print("leyendo alias")
+            user_alias = readMessage(server)
+            print(user_alias, "leyendo id")
+            id_message = server.recv(2)
+            id_message = int.from_bytes(id_message, byteorder='big')
+            print(id_message,"leyendo mensaje")
+            message = readMessage(server)
+            print("leido: " + id_message + " " + user_alias + " " + message)
             window['_SERVER_'].print("s> MESSAGE" + id_message + " FROM " + user_alias + "\n" + message + "\n END")
             
         except:
@@ -264,7 +270,7 @@ class client :
         else:
             # window['_CLIENT_'].print("c> SEND " + user + " " + message)
             while True:
-                response = sock.recv(2)
+                response = sock.recv(4)
                 response = int.from_bytes(response, byteorder='big')
                 match response:
                     case 0:
