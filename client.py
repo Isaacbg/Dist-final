@@ -17,6 +17,27 @@ def readMessage(sock):
             message += c.decode('utf-8')
         return message
 
+def listen(sock, window):
+
+    print("Listening on port " + str(sock.getsockname()[1]))
+    
+    sock.accept()
+    while True:
+        try:
+            #op = readMessage(sock)
+            user_alias = readMessage(sock)
+            id_message = readMessage(sock)
+            message = readMessage(sock)
+            window['_SERVER_'].print("s> MESSAGE" + id_message + " FROM " + user_alias + "\n" + message + "\n END")
+            
+        except:
+            print("Error")
+            break
+            
+    sock.close()
+    return
+
+
 class client :
 
     # ******************** TYPES *********************
@@ -123,29 +144,6 @@ class client :
         return client.RC.ERROR
 
 
-
-    def listen(self, sock, window):
-
-        print("Listening on port " + str(sock.getsockname()[1]))
-        
-        server, ip_server = sock.accept()
-        while True:
-           
-            sock.listen(1)
-            try:
-                #op = readMessage(sock)
-                user_alias = readMessage(sock)
-                id_message = readMessage(sock)
-                message = readMessage(sock)
-                window['_SERVER_'].print("s> MESSAGE" + id_message + " FROM " + user_alias + "\n" + message + "\n END")
-                
-            except:
-                print("Error")
-                break
-                
-        sock.close()
-        return
-
     # *
     # * @param user - User name to connect to the system
     # *
@@ -165,8 +163,9 @@ class client :
             msgSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
             msgSocket.bind((client._server, 0))
+            msgSocket.listen(1)
             print("Listening on port " + str(msgSocket.getsockname()[1]))
-            hilo = threading.Thread(target= client.listen, args=(msgSocket, window))
+            hilo = threading.Thread(target= listen, args=(msgSocket, window))
             hilo.start()
              
             sock.sendall(b'CONNECT\0')
@@ -192,8 +191,8 @@ class client :
                 case 3:
                     window['_SERVER_'].print("s> CONNECT FAIL")
                     return
-        finally:
-            sock.close()
+        # finally:
+        #     sock.close()
         #  Write your code here
         return client.RC.ERROR
 
