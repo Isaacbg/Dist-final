@@ -403,7 +403,7 @@ int main(int argc, char *argv[]){
 		ifaddr = ifaddr->ifa_next;
 	}
 	if(getnameinfo(ifaddr->ifa_addr, sizeof(struct sockaddr_in),ipLocal, NI_MAXHOST, NULL, 0, NI_NUMERICHOST)!= 0){
-		printf("error en getanmeinfo()\n");
+		printf("error en getnameinfo()\n");
 		return -1;
 	}
 

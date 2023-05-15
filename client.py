@@ -8,14 +8,31 @@ import threading
 
 global msgSocket
 
-def readMessage(sock):
-    message = ""
-    while True:
-        c = sock.recv(1)
-        if c == b'\0':
-            break
-        message += c.decode('utf-8')
-    return message
+def readMessage(sock, size = None):
+    # message = ""
+    # while True:
+    #     c = sock.recv(1)
+    #     if c == b'\0':
+    #         break
+    #     message += c.decode('utf-8')
+    # return message
+    a = ''
+    i = 0
+    if size == None:
+        while True:
+            msg = sock.recv(1)
+            if (msg == b'\0'):
+                break
+            a += msg.decode()
+    else:
+        while i < size:
+            msg = sock.recv(1)
+            if (msg == b'\0'):
+                break
+            a += msg.decode()
+            print("a: ", a)
+            i += 1
+    return a
 
 def listen(sock, window):
 
@@ -29,8 +46,9 @@ def listen(sock, window):
             print("leyendo alias")
             user_alias = readMessage(server)
             print(user_alias, "leyendo id")
-            id_message = server.recv(2)
-            id_message = int.from_bytes(id_message, byteorder='big')
+            # id_message = server.recv(2)
+            # id_message = int.from_bytes(id_message, byteorder='big')
+            id_message = readMessage(server, 2)
             print(id_message,"leyendo mensaje")
             message = readMessage(server)
             print("leido: " + id_message + " " + user_alias + " " + message)
