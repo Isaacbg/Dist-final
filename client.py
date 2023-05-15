@@ -4,6 +4,7 @@ import PySimpleGUI as sg
 from enum import Enum
 import argparse
 import socket
+import threading
 
 def readMessage(sock):
         message = ""
@@ -66,7 +67,7 @@ class client :
                         window['_SERVER_'].print("s> REGISTER OK")
                         return
                     case 1:
-                        window['_SERVER_'].print("s> USERNAME IN USER")
+                        window['_SERVER_'].print("s> USERNAME IN USE")
                         return
                     case 2:
                         window['_SERVER_'].print("s> REGISTER FAIL")
@@ -120,6 +121,24 @@ class client :
         return client.RC.ERROR
 
 
+
+    def listen(self, sock, window):
+        
+        while True:
+           
+            socket.listen(1)
+            sock, server_address = sock.accept()
+            try:
+                sock.connect(server_address)
+                op = readMessage(sock)
+                user_alias = readMessage(sock)
+                id_message = readMessage(sock)
+                message = readMessage(sock)
+                window['_SERVER_'].print("s> MESSAGE" + id_message + " FROM " + user_alias + "\n" + message + "\n END")
+                
+            except:
+                pass
+
     # *
     # * @param user - User name to connect to the system
     # *
@@ -130,34 +149,38 @@ class client :
     def connect(user, window):
         
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setblocking(True)
         
         try:
             sock.connect((client._server, client._port))
-            
+            window['_CLIENT_'].print("c> CONNECT " + client._username)
+            #server_address = (client._server, sock.bind("0.0.0.0", 0))
+            #hilo = threading.Thread(target= client.listen, args=(sock, window, server_address))
+            #hilo.start()
+             
             sock.sendall(b'CONNECT\0')
             sock.sendall(bytes(user + '\0', 'utf-8'))
-            sock.sendall(bytes(client._port + '\0', 'utf-8'))
+            sock.sendall(bytes(str(client._port) + '\0', 'utf-8'))
         except :
             window['_SERVER_'].print("s> CONNECT FAIL")
         
         else:
-            # window['_CLIENT_'].print("c> CONNECT " + client._username)
-            while True:
-                response = sock.recv(2)
-                response = int.from_bytes(response, byteorder='big')
-                match response:
-                    case 0:
-                        window['_SERVER_'].print("s> CONNECT OK")
-                        return
-                    case 1:
-                        window['_SERVER_'].print("s> CONNECT FAIL, USER DOES NOT EXIST")
-                        return
-                    case 2:
-                        window['_SERVER_'].print("s> USER ALREADY CONNECTED")
-                        return
-                    case 3:
-                        window['_SERVER_'].print("s> CONNECT FAIL")
-                        return
+            window['_CLIENT_'].print("c> CONNECT " + client._username)
+            response = sock.recv(2)
+            response = int.from_bytes(response, byteorder='big')
+            match response:
+                case 0:
+                    window['_SERVER_'].print("s> CONNECT OK")
+                    return
+                case 1:
+                    window['_SERVER_'].print("s> CONNECT FAIL, USER DOES NOT EXIST")
+                    return
+                case 2:
+                    window['_SERVER_'].print("s> USER ALREADY CONNECTED")
+                    return
+                case 3:
+                    window['_SERVER_'].print("s> CONNECT FAIL")
+                    return
         finally:
             sock.close()
         #  Write your code here
@@ -275,6 +298,7 @@ class client :
             sock.connect((client._server, client._port))
             
             sock.sendall(b'CONNECTEDUSERS\0')
+            sock.sendall(bytes(client._alias + '\0', 'utf-8')) 
         except :
             window['_SERVER_'].print("s> CONNECTED USERS FAIL")
         else:
@@ -310,7 +334,7 @@ class client :
         layout_register = [[sg.Text('Ful Name:'),sg.Input('Text',key='_REGISTERNAME_', do_not_clear=True, expand_x=True)],
                             [sg.Text('Alias:'),sg.Input('Text',key='_REGISTERALIAS_', do_not_clear=True, expand_x=True)],
                             [sg.Text('Date of birth:'),sg.Input('',key='_REGISTERDATE_', do_not_clear=True, expand_x=True, disabled=True, use_readonly_for_disable=False),
-                            sg.CalendarButton("Select Date",close_when_date_chosen=True, target="_REGISTERDATE_", format='%d-%m-%Y',size=(10,1))],
+                            sg.CalendarButton("Select Date",close_when_date_chosen=True, target="_REGISTERDATE_", format='%d/%m/%Y',size=(10,1))],
                             [sg.Button('SUBMIT', button_color=('white', 'blue'))]
                             ]
 

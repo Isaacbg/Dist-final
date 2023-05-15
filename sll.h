@@ -1,31 +1,67 @@
 #ifndef _SLL
 #define _SLL
-struct elemento
+#include <stdint.h>
+#include <netinet/in.h>
+/*------------------Messages-List--------------*/
+struct mensaje
+{   
+    int id;
+    char remite[256];
+    char mensaje[256];
+
+};
+
+struct MsgNode {
+    struct mensaje data;
+    struct MsgNode *next;
+};
+
+struct MsgList {
+    struct MsgNode *head;
+    struct MsgNode *tail;
+};
+
+struct MsgNode *newMsg(struct mensaje data);
+struct MsgList *newMsgList();
+void addMsg(struct MsgList *list, struct mensaje data);
+void freeMsgList(struct MsgList *list);
+void removeMsgNode(struct MsgList *list, int id);
+struct MsgNode *searchMsg(struct MsgList *list, int id);
+
+/*--------------------User-List---------------*/
+
+
+
+struct usuario
 {
-    int clave;
-    char val1[256];
-    int val2;
-    double val3;
+    char nombre[256];
+    char alias[256];
+    char fecha[11];
+    char estado[13];
+    struct in_addr ip;
+    uint16_t puerto;
+    int last_message;
+    struct MsgList *mensajes_pendientes;
 };
 
-struct Node {
-    struct elemento data;
-    struct Node *next;
+struct UserNode {
+    struct usuario data;
+    struct UserNode *next;
 };
 
-struct List {
-    struct Node *head;
-    struct Node *tail;
+struct UserList {
+    struct UserNode *head;
+    struct UserNode *tail;
 };
 
 
 
-struct Node *newNode(struct elemento data);
-struct List *newList();
-void add(struct List *list, struct elemento data);
-void freeList(struct List *list);
-void removeNode(struct List *list, int data);
-struct Node *search(struct List *list, int key);
-void printList(struct List *list);
+struct UserNode *newUser(struct usuario data);
+struct UserList *newUserList();
+void addUser(struct UserList *list, struct usuario data);
+void freeUserList(struct UserList *list);
+void removeUserNode(struct UserList *list, char *alias);
+struct UserNode *searchUser(struct UserList *list, char *alias);
+void printList(struct UserList *list);
 
 #endif
