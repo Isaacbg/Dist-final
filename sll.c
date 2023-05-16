@@ -124,7 +124,7 @@ void removeUserNode(struct UserList *list, char *alias) {
             } else {
                 prev->next = current->next;
             }
-            //freeMsgList(current->data.mensajes_pendientes);
+            freeMsgList(current->data.mensajes_pendientes);
             free(current);
             return;
         }

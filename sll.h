@@ -40,7 +40,7 @@ struct usuario
     char estado[13];
     struct in_addr ip;
     uint16_t puerto;
-    int last_message;
+    uint32_t last_message;
     struct MsgList *mensajes_pendientes;
 };
 
