@@ -7,7 +7,7 @@ import socket
 import threading
 import zeep
 
-global web_url
+global web_url 
 web_url = "http://localhost:8000/?wsdl"
 
 
@@ -25,7 +25,6 @@ def readMessage(sock):
 
 
 def listen(sock, window):
-    print("modifiying:", sock)
     """Esta función se encarga de escuchar los mensajes que llegan al socket de mensajes.
         Se lee el código de operación y se ejecuta la acción correspondiente."""
    
@@ -176,7 +175,6 @@ class client :
         try:
             sock.connect((client._server, client._port))
             
-            global msgSocket
             msgSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             msgSocket.setblocking(True)
 
@@ -236,8 +234,6 @@ class client :
             match response:
                 case 0:
                     window['_SERVER_'].print("s> DISCONNECT OK")
-                    print("closing:", msgSocket)
-                    msgSocket.close()
                     return
                 case 1:
                     window['_SERVER_'].print("s> DISCONNECT FAIL / USER DOES NOT EXIST")

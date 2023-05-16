@@ -127,7 +127,6 @@ int tratar_mensaje(struct parametros_thread *parametros){
 		close(sc_client);
 		perror("Error al recibir el mensaje");
 	}
-	printf("s> %s\n", operacion);
 	if (strcmp(operacion, "REGISTER") == 0){
 		// Se registra un nuevo usuario
 		char nombre[256];
@@ -259,7 +258,7 @@ int tratar_mensaje(struct parametros_thread *parametros){
 		struct UserNode *user = searchUser(lista_usuarios, alias);
 		if (user == NULL){
 			pthread_mutex_unlock(&mutex_usuarios);
-			//alias does not exist
+			// No se encuentra el usuario
 			response = '1';
 			if (sendMessage(sc_client, &response, 1) < 0){
 				perror("Error al enviar el mensaje");	
@@ -268,8 +267,7 @@ int tratar_mensaje(struct parametros_thread *parametros){
 			close(sc_client);
 			return 0;
 		}
-		//alias exists
-		//sección crítica
+
 		if (strcmp(user->data.estado, "CONNECTED") == 0){
 			pthread_mutex_unlock(&mutex_usuarios);
 			response = '2';
@@ -283,7 +281,8 @@ int tratar_mensaje(struct parametros_thread *parametros){
 		strcpy(user->data.estado, "CONNECTED");
 		user->data.puerto = atoi(port);
 		user->data.ip = client_ip.sin_addr;
-		//end sección crítica
+		
+		// Comprobamos si hay mensajes pendientes
 		struct MsgNode *msg = user->data.mensajes_pendientes->head;
 		while (msg != NULL){
 			if (msg->data.id <= user->data.last_message){
@@ -303,19 +302,23 @@ int tratar_mensaje(struct parametros_thread *parametros){
 		return 0;
 	}
 	else if (strcmp(operacion, "DISCONNECT")== 0){
+		// Se desconecta un usuario
 		char alias[256];
 		char response;
 		if (readLine(sc_client, alias, 256) < 0){
 			printf("DISCONNECT FAIL BEFORE ALIAS\n");
+			response = '3';
+			if (sendMessage(sc_client, &response, 1) < 0){
+				perror("Error al enviar el mensaje");	
+			}
 			return 0;
 		}
-		/*Check if client data is correct*/
-		/**/
+		
 		pthread_mutex_lock(&mutex_usuarios);
 		struct UserNode *user = searchUser(lista_usuarios, alias);
 		if (user == NULL){
 			pthread_mutex_unlock(&mutex_usuarios);
-			//alias does not exist
+			// No se encuentra el usuario
 			response = '1';
 			if (sendMessage(sc_client, &response, 1) < 0){
 				perror("Error al enviar el mensaje");	
@@ -325,7 +328,7 @@ int tratar_mensaje(struct parametros_thread *parametros){
 			return 0;
 		}
 
-		//alias exists
+		// Comprobamos que el usuario esté conectado
 		if (strcmp(user->data.estado, "DISCONNECTED") == 0){
 			pthread_mutex_unlock(&mutex_usuarios);
 			response = '2';
@@ -336,6 +339,8 @@ int tratar_mensaje(struct parametros_thread *parametros){
 			close(sc_client);
 			return 0;
 		}
+
+		// Comprobamos que el usuario que se desconecta es el mismo que se conectó
 		if (user->data.ip.s_addr != client_ip.sin_addr.s_addr){
 			pthread_mutex_unlock(&mutex_usuarios);
 			response = '3';
@@ -362,29 +367,43 @@ int tratar_mensaje(struct parametros_thread *parametros){
 		return 0;
 	}
 	else if (strcmp(operacion, "SEND")== 0){
+		// Se envía un mensaje
 		char alias[256];
 		char alias_destino[256];
 		char mensaje[256];
 		char response;
 		if (readLine(sc_client, alias, 256) < 0){
 			printf("SEND FAIL BEFORE ALIAS\n");
+			response = '2';
+			if (sendMessage(sc_client, &response, 1) < 0){
+				perror("Error al enviar el mensaje");	
+			}
 			return 0;
 		}
 		if (readLine(sc_client, alias_destino, 256) < 0){
 			printf("s> SEND %s FAIL\n", alias);
+			response = '2';
+			if (sendMessage(sc_client, &response, 1) < 0){
+				perror("Error al enviar el mensaje");	
+			}
 			return 0;
 		}
 		if (readLine(sc_client, mensaje, 256) < 0){
 			printf("s> SEND %s %s FAIL\n", alias, alias_destino);
+			response = '2';
+			if (sendMessage(sc_client, &response, 1) < 0){
+				perror("Error al enviar el mensaje");	
+			}
 			return 0;
 		}
+		
 		pthread_mutex_lock(&mutex_usuarios);
 		struct UserNode *user = searchUser(lista_usuarios, alias);
 		struct UserNode *user_destino = searchUser(lista_usuarios, alias_destino);
 		printf("check2\n");
 		if(user == NULL || user_destino == NULL){
 			pthread_mutex_unlock(&mutex_usuarios);
-			//alias does not exist
+			// No se encuentra el usuario
 			response = '1';
 			if (sendMessage(sc_client, &response, 1) < 0){
 				perror("Error al enviar el mensaje");	
@@ -393,14 +412,13 @@ int tratar_mensaje(struct parametros_thread *parametros){
 			close(sc_client);
 			return 0;
 		}
-		//alias exists
 
+		// Creamos el mensaje
 		struct mensaje *msgToSave;
 		msgToSave = malloc(sizeof(struct mensaje));
 		msgToSave->id = user_destino->data.last_message + 1;
 		strcpy(msgToSave->remite, alias);
 		strcpy(msgToSave->mensaje, mensaje);
-		// printf("s> envio mensaje %s\n", msgToSave->mensaje);
 		addMsg(user_destino->data.mensajes_pendientes, *msgToSave);
 		
 		response = '0';
@@ -410,12 +428,17 @@ int tratar_mensaje(struct parametros_thread *parametros){
 		char str_id[sizeof(int)*8+1];
 		if (sprintf(str_id, "%d", msgToSave->id) < 0){
 			printf("s> SEND %s %s FAIL\n", alias, alias_destino);
+			response = '2';
+			if (sendMessage(sc_client, &response, 1) < 0){
+				perror("Error al enviar el mensaje");	
+			}
 			return 0;
 		}
-		sendMessage(sc_client,str_id, strlen(str_id)+1);
 
+		// Se envía el id del mensaje y el mensaje
+		sendMessage(sc_client,str_id, strlen(str_id)+1);
 		enviar_mensaje(&(user_destino->data), msgToSave);
-		
+
 		pthread_mutex_unlock(&mutex_usuarios);
 
 		close(sc_client);
@@ -426,17 +449,21 @@ int tratar_mensaje(struct parametros_thread *parametros){
 		char response;
 		if (readLine(sc_client, alias, 256) < 0){
 			printf("s> CONNECTEDUSERS FAIL BEFORE ALIAS \n");
+			response = '2';
+			if (sendMessage(sc_client, &response, 1) < 0){
+				perror("Error al enviar el mensaje");	
+			}
 			return 0;
 		}
 		pthread_mutex_lock(&mutex_usuarios);
 		struct UserNode *user = searchUser(lista_usuarios, alias);
 		if (user == NULL){
 			pthread_mutex_unlock(&mutex_usuarios);
-			//alias does not exist
-			response = '2';
+			response = '1';
 			if (sendMessage(sc_client, &response, 1) < 0){
 				perror("Error al enviar el mensaje");	
 			}
+			printf("s> CONNECTEDUSERS FAIL\n");
 			close(sc_client);
 			return 0;
 		}
@@ -455,6 +482,8 @@ int tratar_mensaje(struct parametros_thread *parametros){
 			pthread_mutex_unlock(&mutex_usuarios);
 			perror("Error al enviar el mensaje");	
 		}
+
+		// Se envía el número de usuarios conectados y los alias
 		int num_usuarios = 0;
 		for (struct UserNode *i = lista_usuarios->head; i != NULL; i = i->next){
 			if (strcmp(i->data.estado, "CONNECTED") == 0){
@@ -462,8 +491,8 @@ int tratar_mensaje(struct parametros_thread *parametros){
 			}
 		};
 		u_int32_t n_users = htonl(num_usuarios);
-
 		write(sc_client, &n_users, 4);
+
 		for (struct UserNode *i = lista_usuarios->head; i != NULL; i = i->next){
 			if (strcmp(i->data.estado, "CONNECTED") == 0){
 				sendMessage(sc_client, i->data.alias, strlen(i->data.alias) + 1);
@@ -478,16 +507,15 @@ int tratar_mensaje(struct parametros_thread *parametros){
 	
 int main(int argc, char *argv[]){
 	struct hostent *hp;
-	//struct in_addr ip_servidor;
 	struct sockaddr_in server_addr, client_addr;
 	int sc_server, sc_client;
 	socklen_t size;
 
-	//check if the number of arguments is correct
+	// Comprobamos el número de argumentos
 	if (argc != 2){
 		perror("Error: el número de argumentos es incorrecto \n");
 	}
-	//get the first argument and check if it is a number
+	// Comprobamos si el puerto es un número
 	int port = atoi(argv[1]);
 	
 	if (port == 0){
@@ -503,10 +531,12 @@ int main(int argc, char *argv[]){
 		return -1;
     }
 
+	// Buscamos la ip local
 	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
         if (ifa->ifa_addr == NULL)
             continue;  
 
+		// Comprobamos que sea una dirección IPv4
         s=getnameinfo(ifa->ifa_addr,sizeof(struct sockaddr_in),ipLocal, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
 
         if((strcmp(ifa->ifa_name,"wlo1")==0)&&(ifa->ifa_addr->sa_family==AF_INET))
@@ -518,7 +548,6 @@ int main(int argc, char *argv[]){
 			break;
     }
 	}
-
 	
 	printf("s> init server %s:%d\n",ipLocal, port);
 
@@ -526,13 +555,14 @@ int main(int argc, char *argv[]){
 		perror("Error al crear el socket del servidor");
 	}
 
+	// Configuramos el socket del servidor
 	bzero((char*)&server_addr, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port); 
 	server_addr.sin_addr.s_addr = INADDR_ANY; //luego la pasaremos por variable de entorno
 	setsockopt(sc_server, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
 	
-	/*bind socket del servidor*/
+	// Asociamos el socket del servidor a un puerto
 	if(bind(sc_server,(struct sockaddr *)&server_addr, sizeof(server_addr)) < 0){
 		close(sc_server);
 		perror("Error al bindear el socket del servidor");
@@ -545,10 +575,9 @@ int main(int argc, char *argv[]){
 
 	lista_usuarios = newUserList();
 
-	//pthread_mutex_init(&mutex_mensaje, NULL);
-	//pthread_cond_init(&cond_mensaje, NULL);
+	pthread_mutex_init(&mutex_mensaje, NULL);
+	pthread_cond_init(&cond_mensaje, NULL);
 	pthread_attr_init(&t_attr);
-	// atributos de los threads, threads independientes
 	pthread_attr_setdetachstate(&t_attr, PTHREAD_CREATE_DETACHED);
 
 	struct parametros_thread parametros;
@@ -556,6 +585,7 @@ int main(int argc, char *argv[]){
 
 
 	for(;;) {
+		// Se acepta la conexión del cliente
 		parametros.socket = accept(sc_server,(struct sockaddr *)&parametros.client_ip, &size);
 		if (parametros.socket < 0){
 			close(parametros.socket);
@@ -563,7 +593,7 @@ int main(int argc, char *argv[]){
 			break;
 		}
 		if (pthread_create(&thid, &t_attr, (void *)tratar_mensaje, (void *)&parametros)== 0) {
-				// se espera a que el thread copie el mensaje 
+				// Se espera a que el thread copie el mensaje 
 				pthread_mutex_lock(&mutex_mensaje);
 				while (mensaje_no_copiado)
 					pthread_cond_wait(&cond_mensaje, &mutex_mensaje);

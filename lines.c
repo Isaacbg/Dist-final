@@ -20,7 +20,6 @@ int sendMessage(int socket, char * buffer, int len)
 		
 	do {
 		r = write(socket, buffer, l);
-		printf("r: %d\n", r);
 		l = l -r;
 		buffer = buffer + r;
 	} while ((l>0) && (r>=0));

@@ -7,7 +7,8 @@ import socket
 import threading
 import zeep
 
-global web_url
+msgSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+global web_url 
 web_url = "http://localhost:8000/?wsdl"
 
 
@@ -24,14 +25,12 @@ def readMessage(sock):
     return message
 
 
-def listen(sock, window):
-    print("modifiying:", sock)
+def listen(dummy, window):
     """Esta función se encarga de escuchar los mensajes que llegan al socket de mensajes.
         Se lee el código de operación y se ejecuta la acción correspondiente."""
-   
     while True:
         try:
-            server, ip_server = sock.accept()
+            server, ip_server = msgSocket.accept()
             
             op = readMessage(server)
             if op == "SEND_MESSAGE": 
@@ -48,10 +47,8 @@ def listen(sock, window):
                 server.close()
                        
         except:
-            break
-            
-    sock.close()
-    return
+            print("listen end")
+            return
 
 
 class client :
@@ -96,10 +93,10 @@ class client :
             sock.sendall(bytes(user + '\0', 'utf-8'))
             sock.sendall(bytes(client._date + '\0', 'utf-8'))
         except :
-            window['_SERVER_'].print("s> REGISTER FAIL")
+            window['_SERVER_'].print("s> REGISTER FAIL") 
 
         else: 
-            """Recibe la respuesta del servidor y, dependiendo del código de respuesta, muestra el mensaje por pantalla."""
+            #Recibe la respuesta del servidor y, dependiendo del código de respuesta, muestra el mensaje por pantalla.
             response = int(sock.recv(1).decode('utf-8'))
             match response:
                 case 0:
@@ -140,7 +137,7 @@ class client :
             window['_SERVER_'].print("s> UNREGISTER FAIL")
         
         else:
-            """Recibe la respuesta del servidor y, dependiendo del código de respuesta, muestra el mensaje por pantalla."""
+            #Recibe la respuesta del servidor y, dependiendo del código de respuesta, muestra el mensaje por pantalla.
             response = int(sock.recv(1).decode('utf-8'))
             match response:
                 case 0:
@@ -165,34 +162,36 @@ class client :
     # * @return ERROR if another error occurred
     @staticmethod
     def connect(user, window):
+        print("connect")
         """Esta función se encarga de conectar al usuario en el servidor.
             Recibe el nombre de usuario y la ventana de la interfaz gráfica.
             Creará un socket y se conectará al servidor, enviando el código de operación y la información necesaria.
-            Además, creará un socket de mensajes para recibir los mensajes que le envíen."""
+            Además, creará un socket de mensajes para recibir los mensajes que le envíen.
+            Se creará un hilo para escuchar los mensajes que lleguen al socket de mensajes."""
         
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
-
         try:
             sock.connect((client._server, client._port))
-            
-            global msgSocket
-            msgSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            msgSocket.setblocking(True)
-
+           
+            # Buscamos un puerto libre para el socket de mensajes y lo enlazamos
             msgSocket.bind((client._server, 0))
             msgSocket.listen(1)
             print("Listening on port " + str(msgSocket.getsockname()[1]))
-            hilo = threading.Thread(target= listen, args=(msgSocket, window))
+           
+            # Creamos un hilo para escuchar los mensajes que lleguen al socket de mensajes
+            hilo = threading.Thread(target= listen, args=("a",window))
             hilo.start()
              
             sock.sendall(b'CONNECT\0')
             sock.sendall(bytes(user + '\0', 'utf-8'))
             sock.sendall(bytes(str(msgSocket.getsockname()[1]) + '\0', 'utf-8'))
+        
         except :
             window['_SERVER_'].print("s> CONNECT FAIL")
         
         else:
+            #Recibe la respuesta del servidor y, dependiendo del código de respuesta, muestra el mensaje por pantalla.
             response = int(sock.recv(1).decode('utf-8'))
             match response:
                 case 0:
@@ -207,9 +206,7 @@ class client :
                 case 3:
                     window['_SERVER_'].print("s> CONNECT FAIL")
                     return
-        # finally:
-        #     sock.close()
-        #  Write your code here
+
         return client.RC.ERROR
 
 
@@ -221,7 +218,9 @@ class client :
     # * @return ERROR if another error occurred
     @staticmethod
     def disconnect(user, window):
-        
+        """Esta función se encarga de desconectar al usuario en el servidor.
+            Recibe el nombre de usuario y la ventana de la interfaz gráfica.
+            Creará un socket y se conectará al servidor, enviando el código de operación y la información necesaria."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
         try:
@@ -232,12 +231,12 @@ class client :
         except :
             window['_SERVER_'].print("s> DISCONNECT FAIL")
         else:
+            #Recibe la respuesta del servidor y, dependiendo del código de respuesta, muestra el mensaje por pantalla.
             response = int(sock.recv(1).decode('utf-8'))
             match response:
                 case 0:
-                    window['_SERVER_'].print("s> DISCONNECT OK")
-                    print("closing:", msgSocket)
                     msgSocket.close()
+                    window['_SERVER_'].print("s> DISCONNECT OK")
                     return
                 case 1:
                     window['_SERVER_'].print("s> DISCONNECT FAIL / USER DOES NOT EXIST")
@@ -250,7 +249,7 @@ class client :
                     return
         finally:
             sock.close()
-        #  Write your code here
+
         return client.RC.ERROR
 
     # *
@@ -262,9 +261,14 @@ class client :
     # * @return ERROR the user does not exist or another error occurred
     @staticmethod
     def send(user, message, window):
+        """Esta función se encarga de enviar un mensaje a un usuario.
+            Recibe el nombre de usuario, el mensaje y la ventana de la interfaz gráfica.
+            Creará un socket y se conectará al servidor, enviando el código de operación y la información necesaria.
+            Además, se encargará de quitar los espacios del mensaje y enviarlo al servidor."""
+        
+        # Quitamos los espacios del mensaje    
         soap = zeep.Client(wsdl = web_url)
         transf_msg = soap.service.quitar_espacios(message)
-
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
@@ -280,6 +284,7 @@ class client :
             window['_SERVER_'].print("s> SEND FAIL")
             
         else:
+            # Recibe la respuesta del servidor y, dependiendo del código de respuesta, muestra el mensaje por pantalla.
             response = int(sock.recv(1).decode('utf-8'))
             match response:
                 case 0:
@@ -316,7 +321,9 @@ class client :
 
     @staticmethod
     def connectedUsers(window):
-        
+        """Esta función se encarga de mostrar los usuarios conectados en el servidor.
+            Recibe la ventana de la interfaz gráfica.
+            Creará un socket y se conectará al servidor, enviando el código de operación y la información necesaria."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
         try:
@@ -327,14 +334,15 @@ class client :
         except :
             window['_SERVER_'].print("s> CONNECTED USERS FAIL")
         else:
+            # Recibe la respuesta del servidor y, dependiendo del código de respuesta, muestra el mensaje por pantalla.
             response = int(sock.recv(1).decode('utf-8'))
             match response:
                 case 0:
                     users = ""
                     user_count = sock.recv(4)
-                    #string to int
                     user_count = int.from_bytes(user_count, byteorder='big')
                     users = readMessage(sock)
+                    # Recibe el número de usuarios conectados e itera para recibir los nombres de los usuarios.
                     for i in range(1 ,user_count):
                         user = readMessage(sock)
                         users += ", " + user 
@@ -347,7 +355,6 @@ class client :
                     window['_SERVER_'].print("s> CONNECTED USERS FAIL")
                     return
         
-        #  Write your code here
         return client.RC.ERROR
 
 
